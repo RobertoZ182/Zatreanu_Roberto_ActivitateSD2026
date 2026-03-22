@@ -50,7 +50,46 @@ void dezalocare(struct Telefon** vector, int* nrElemente) {
     *vector = NULL;
     *nrElemente = 0;
 }
+struct Telefon* copiazaPrimeleNElemente(struct Telefon* vector, int nrElemente, int nrElementeCopiate) {
+    if (nrElementeCopiate < nrElemente) {
+        		struct Telefon* vectorNou = malloc(sizeof(Telefon) * nrElementeCopiate);
+        		for (int i = 0; i < nrElementeCopiate; i++) {
+        			vectorNou[i] = copiaza(vector[i]);
+        		}
+        		return vectorNou;
+        	}
+        	else {
+        		return NULL;
+        	}
+}
+void copiazaAnumiteElemente(struct Telefon* vector, char nrElemente, float prag, struct Telefon** vectorNou, int* dimensiune) {
+    	*dimensiune = 0;
+	for (int i = 0; i < nrElemente; i++) {
+		if (vector[i].suprafata < prag) {
+			(*dimensiune)++;
+		}
+	}
+	*vectorNou = malloc(sizeof(Telefon) * (*dimensiune));
+	*dimensiune = 0;
+	for (int i = 0; i < nrElemente; i++) {
+		if (vector[i].suprafata < prag) {
+			(*vectorNou)[*dimensiune] = copiaza(vector[i]);
+			(*dimensiune)++;
+		}
+	}
+}
 
+struct Telefon getPrimulElementConditionat(struct Telefon* vector, int nrElemente, const char* conditie) {
+        Telefon s;
+    	s.id = -1;
+    	s.denumire = NULL;
+    	for (int i = 0; i < nrElemente; i++) {
+    		if (strcmp(numeCautat, vector[i].denumire)==0) {
+    			s = copiaza(vector[i]);
+    		}
+    	}
+    	return s;
+}
 int main() {
    
     int n = 1;
