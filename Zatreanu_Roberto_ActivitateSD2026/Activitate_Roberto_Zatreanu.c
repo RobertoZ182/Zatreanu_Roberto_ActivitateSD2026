@@ -113,6 +113,94 @@ struct Telefon getPrimulElementConditionat(struct Telefon* vector, int nrElement
     return s;
 }
 
+void afisareTelefon(struct Telefon telefon) {
+    printf("Id: %d\n", telefon.id);
+    printf("Capacitate baterie: %d\n", telefon.capacitateBaterie);
+    printf("Marca: %s\n", telefon.marca);
+    printf("Pret: %.2f\n", telefon.pret);
+    printf("Model: %c\n\n", telefon.model);
+}
+
+void afisareVectorTelefoane(struct Telefon* telefoane, int nrTelefoane) {
+    for (int i = 0; i < nrTelefoane; i++) {
+        afisareTelefon(telefoane[i]);
+    }
+}
+
+void adaugaTelefonInVector(struct Telefon** telefoane, int* nrTelefoane, struct Telefon telefonNou) {
+    struct Telefon* aux = (struct Telefon*)malloc(sizeof(struct Telefon) * ((*nrTelefoane) + 1));
+
+    for (int i = 0; i < *nrTelefoane; i++) {
+        aux[i] = (*telefoane)[i];
+    }
+
+    aux[*nrTelefoane] = copiaza(telefonNou);
+
+    free(*telefoane);
+    *telefoane = aux;
+    (*nrTelefoane)++;
+}
+
+struct Telefon citireTelefonFisier(FILE* file) {
+    char buffer[100];
+    char sep[3] = ",\n";
+
+    struct Telefon t;
+    t.id = -1;
+    t.capacitateBaterie = 0;
+    t.marca = NULL;
+    t.pret = 0;
+    t.model = '-';
+
+    if (fgets(buffer, 100, file) != NULL) {
+        char* aux;
+        aux = strtok(buffer, sep);
+        if (aux != NULL) {
+            t.id = atoi(aux);
+            t.capacitateBaterie = atoi(strtok(NULL, sep));
+
+            aux = strtok(NULL, sep);
+            t.marca = (char*)malloc(strlen(aux) + 1);
+            strcpy_s(t.marca, strlen(aux) + 1, aux);
+
+            t.pret = (float)atof(strtok(NULL, sep));
+            t.model = *strtok(NULL, sep);
+        }
+    }
+
+    return t;
+}
+
+struct Telefon* citireVectorTelefoaneFisier(const char* numeFisier, int* nrTelefoaneCitite) {
+    FILE* file = fopen(numeFisier, "r");
+    struct Telefon* vector = NULL;
+    *nrTelefoaneCitite = 0;
+
+    if (file) {
+        while (!feof(file)) {
+            struct Telefon t = citireTelefonFisier(file);
+            if (t.id != -1) {
+                adaugaTelefonInVector(&vector, nrTelefoaneCitite, t);
+                free(t.marca);
+            }
+        }
+        fclose(file);
+    }
+
+    return vector;
+}
+
+void dezalocareVectorTelefoane(struct Telefon** vector, int* nrTelefoane) {
+    if (*vector) {
+        for (int i = 0; i < *nrTelefoane; i++) {
+            free((*vector)[i].marca);
+        }
+        free(*vector);
+        *vector = NULL;
+        *nrTelefoane = 0;
+    }
+}
+
 int main() {
     int n = 4;
     struct Telefon* v = (struct Telefon*)malloc(sizeof(struct Telefon) * n);
@@ -155,6 +243,39 @@ int main() {
     }
     else {
         printf("Nu s-a gasit telefonul cautat.\n");
+    }
+
+    printf("\n==============================\n");
+    printf("1. afisareTelefon()\n");
+    printf("==============================\n");
+    afisareTelefon(v[0]);
+
+    printf("\n==============================\n");
+    printf("2. afisareVectorTelefoane()\n");
+    printf("==============================\n");
+    afisareVectorTelefoane(v, n);
+
+    printf("\n==============================\n");
+    printf("3. adaugaTelefonInVector()\n");
+    printf("==============================\n");
+    struct Telefon telefonNou = initializare(5, 4500, "Huawei", 220.0f, 'H');
+    adaugaTelefonInVector(&v, &n, telefonNou);
+    afisareVectorTelefoane(v, n);
+    free(telefonNou.marca);
+
+    printf("\n==============================\n");
+    printf("4, 5, 6. Citire din fisier + afisare + dezalocare\n");
+    printf("==============================\n");
+
+    int nrTelefoaneFisier = 0;
+    struct Telefon* vectorFisier = citireVectorTelefoaneFisier("telefoane.txt", &nrTelefoaneFisier);
+
+    if (vectorFisier != NULL) {
+        afisareVectorTelefoane(vectorFisier, nrTelefoaneFisier);
+        dezalocareVectorTelefoane(&vectorFisier, &nrTelefoaneFisier);
+    }
+    else {
+        printf("Fisierul telefoane.txt nu a putut fi deschis sau nu contine date.\n");
     }
 
     if (primele2 != NULL) {
