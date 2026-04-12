@@ -200,7 +200,171 @@ void dezalocareVectorTelefoane(struct Telefon** vector, int* nrTelefoane) {
         *nrTelefoane = 0;
     }
 }
+Telefon citireTelefonDinFisier(FILE* file) {
+    char buffer[100];
+    char sep[3] = ",\n";
+    Telefon t;
 
+    t.id = -1;
+    t.capacitateBaterie = 0;
+    t.marca = NULL;
+    t.pret = 0;
+    t.model = '-';
+
+    if (fgets(buffer, 100, file) != NULL) {
+        char* aux;
+
+        aux = strtok(buffer, sep);
+        if (aux != NULL) {
+            t.id = atoi(aux);
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.capacitateBaterie = atoi(aux);
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.marca = (char*)malloc(strlen(aux) + 1);
+                if (t.marca != NULL) {
+                    strcpy_s(t.marca, strlen(aux) + 1, aux);
+                }
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.pret = (float)atof(aux);
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.model = aux[0];
+            }
+        }
+    }
+
+    return t;
+}
+
+void afisareTelefon(Telefon telefon) {
+    printf("Id: %d\n", telefon.id);
+    printf("Capacitate baterie: %d\n", telefon.capacitateBaterie);
+    printf("Marca: %s\n", telefon.marca);
+    printf("Pret: %.2f\n", telefon.pret);
+    printf("Model: %c\n\n", telefon.model);
+}
+
+void afisareListaTelefoane(Nod* lista) {
+    while (lista) {
+        afisareTelefon(lista->info);
+        lista = lista->next;
+    }
+}
+
+void adaugaTelefonInLista(Nod** lista, Telefon telefonNou) {
+    Nod* nou = (Nod*)malloc(sizeof(Nod));
+    nou->info = telefonNou;   // shallow copy, exact ca la profesor
+    nou->next = NULL;
+
+    if (*lista == NULL) {
+        *lista = nou;
+    }
+    else {
+        Nod* p = *lista;
+        while (p->next) {
+            p = p->next;
+        }
+        p->next = nou;
+    }
+}
+
+void adaugaLaInceputInLista(Nod** lista, Telefon telefonNou) {
+    Nod* nou = (Nod*)malloc(sizeof(Nod));
+    nou->info = telefonNou;   // shallow copy
+    nou->next = *lista;
+    *lista = nou;
+}
+
+Nod* citireListaTelefoaneDinFisier(const char* numeFisier) {
+    FILE* f = fopen(numeFisier, "r");
+    Nod* lista = NULL;
+
+    if (f != NULL) {
+        while (!feof(f)) {
+            Telefon t = citireTelefonDinFisier(f);
+            if (t.id != -1) {
+                adaugaTelefonInLista(&lista, t);
+            }
+        }
+        fclose(f);
+    }
+
+    return lista;
+}
+
+void dezalocareListaTelefoane(Nod** lista) {
+    while (*lista) {
+        free((*lista)->info.marca);
+        Nod* p = *lista;
+        *lista = (*lista)->next;
+        free(p);
+    }
+}
+
+float calculeazaPretMediu(Nod* lista) {
+    float suma = 0;
+    int nr = 0;
+
+    while (lista) {
+        suma += lista->info.pret;
+        nr++;
+        lista = lista->next;
+    }
+
+    if (nr > 0) {
+        return suma / nr;
+    }
+    return 0;
+}
+
+void stergeTelefoaneDinModel(Nod** lista, char modelCautat) {
+    while (*lista && (*lista)->info.model == modelCautat) {
+        Nod* temp = *lista;
+        *lista = (*lista)->next;
+        free(temp->info.marca);
+        free(temp);
+    }
+
+    if (*lista == NULL) {
+        return;
+    }
+
+    Nod* p = *lista;
+    while (p->next) {
+        if (p->next->info.model == modelCautat) {
+            Nod* temp = p->next;
+            p->next = temp->next;
+            free(temp->info.marca);
+            free(temp);
+        }
+        else {
+            p = p->next;
+        }
+    }
+}
+
+float calculeazaPretulTelefoanelorUneiMarci(Nod* lista, const char* marcaCautata) {
+    float suma = 0;
+
+    while (lista) {
+        if (strcmp(lista->info.marca, marcaCautata) == 0) {
+            suma += lista->info.pret;
+        }
+        lista = lista->next;
+    }
+
+    return suma;
+}
 int main() {
     int n = 4;
     struct Telefon* v = (struct Telefon*)malloc(sizeof(struct Telefon) * n);
