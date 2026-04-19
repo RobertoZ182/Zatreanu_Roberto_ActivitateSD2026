@@ -365,6 +365,229 @@ float calculeazaPretulTelefoanelorUneiMarci(Nod* lista, const char* marcaCautata
 
     return suma;
 }
+struct Nod {
+    Telefon info;
+    Nod* next;
+    Nod* prev;
+};
+
+struct ListaDubla {
+    Nod* prim;
+    Nod* ultim;
+};
+
+Telefon initializareTelefon(int id, int capacitateBaterie, const char* marca, float pret, char model) {
+    Telefon t;
+    t.id = id;
+    t.capacitateBaterie = capacitateBaterie;
+    t.pret = pret;
+    t.model = model;
+
+    if (marca != NULL) {
+        t.marca = (char*)malloc(strlen(marca) + 1);
+        strcpy(t.marca, marca);
+    }
+    else {
+        t.marca = NULL;
+    }
+
+    return t;
+}
+
+Telefon copiazaTelefon(Telefon t) {
+    return initializareTelefon(t.id, t.capacitateBaterie, t.marca, t.pret, t.model);
+}
+
+void afisareTelefon(Telefon telefon) {
+    printf("Id: %d\n", telefon.id);
+    printf("Capacitate baterie: %d\n", telefon.capacitateBaterie);
+    printf("Marca: %s\n", telefon.marca);
+    printf("Pret: %.2f\n", telefon.pret);
+    printf("Model: %c\n\n", telefon.model);
+}
+
+Telefon citireTelefonDinFisier(FILE* file) {
+    char buffer[100];
+    char sep[3] = ",\n";
+    Telefon t;
+
+    t.id = -1;
+    t.capacitateBaterie = 0;
+    t.marca = NULL;
+    t.pret = 0;
+    t.model = '-';
+
+    if (fgets(buffer, sizeof(buffer), file) != NULL) {
+        char* aux = strtok(buffer, sep);
+        if (aux != NULL) {
+            t.id = atoi(aux);
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.capacitateBaterie = atoi(aux);
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.marca = (char*)malloc(strlen(aux) + 1);
+                strcpy(t.marca, aux);
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.pret = (float)atof(aux);
+            }
+
+            aux = strtok(NULL, sep);
+            if (aux != NULL) {
+                t.model = aux[0];
+            }
+        }
+    }
+
+    return t;
+}
+
+void afisareListaTelefoane(ListaDubla lista) {
+    Nod* p = lista.prim;
+    while (p != NULL) {
+        afisareTelefon(p->info);
+        p = p->next;
+    }
+}
+
+void adaugaTelefonInLista(ListaDubla* lista, Telefon telefonNou) {
+    Nod* nou = (Nod*)malloc(sizeof(Nod));
+    nou->info = copiazaTelefon(telefonNou);
+    nou->next = NULL;
+    nou->prev = lista->ultim;
+
+    if (lista->prim == NULL) {
+        lista->prim = nou;
+        lista->ultim = nou;
+    }
+    else {
+        lista->ultim->next = nou;
+        lista->ultim = nou;
+    }
+}
+
+void adaugaLaInceputInLista(ListaDubla* lista, Telefon telefonNou) {
+    Nod* nou = (Nod*)malloc(sizeof(Nod));
+    nou->info = copiazaTelefon(telefonNou);
+    nou->prev = NULL;
+    nou->next = lista->prim;
+
+    if (lista->prim == NULL) {
+        lista->prim = nou;
+        lista->ultim = nou;
+    }
+    else {
+        lista->prim->prev = nou;
+        lista->prim = nou;
+    }
+}
+
+ListaDubla citireLDTelefoaneDinFisier(const char* numeFisier) {
+    ListaDubla lista;
+    lista.prim = NULL;
+    lista.ultim = NULL;
+
+    FILE* f = fopen(numeFisier, "r");
+    if (f != NULL) {
+        while (!feof(f)) {
+            Telefon t = citireTelefonDinFisier(f);
+            if (t.id != -1) {
+                adaugaTelefonInLista(&lista, t);
+                free(t.marca);
+            }
+        }
+        fclose(f);
+    }
+
+    return lista;
+}
+
+void dezalocareLDTelefoane(ListaDubla* lista) {
+    Nod* p = lista->prim;
+    while (p != NULL) {
+        Nod* temp = p;
+        p = p->next;
+        free(temp->info.marca);
+        free(temp);
+    }
+
+    lista->prim = NULL;
+    lista->ultim = NULL;
+}
+
+float calculeazaPretMediu(ListaDubla lista) {
+    float suma = 0;
+    int nr = 0;
+
+    Nod* p = lista.prim;
+    while (p != NULL) {
+        suma += p->info.pret;
+        nr++;
+        p = p->next;
+    }
+
+    if (nr == 0) {
+        return 0;
+    }
+
+    return suma / nr;
+}
+
+void stergeTelefonDupaID(ListaDubla* lista, int id) {
+    Nod* p = lista->prim;
+
+    while (p != NULL) {
+        if (p->info.id == id) {
+            if (p->prev == NULL && p->next == NULL) {
+                lista->prim = NULL;
+                lista->ultim = NULL;
+            }
+            else if (p->prev == NULL) {
+                lista->prim = p->next;
+                lista->prim->prev = NULL;
+            }
+            else if (p->next == NULL) {
+                lista->ultim = p->prev;
+                lista->ultim->next = NULL;
+            }
+            else {
+                p->prev->next = p->next;
+                p->next->prev = p->prev;
+            }
+
+            free(p->info.marca);
+            free(p);
+            return;
+        }
+        p = p->next;
+    }
+}
+char* getMarcaTelefonScump(ListaDubla lista) {
+    if (lista.prim == NULL) {
+        return NULL;
+    }
+
+    Nod* p = lista.prim;
+    Nod* max = lista.prim;
+
+    while (p != NULL) {
+        if (p->info.pret > max->info.pret) {
+            max = p;
+        }
+        p = p->next;
+    }
+
+    char* rezultat = (char*)malloc(strlen(max->info.marca) + 1);
+    strcpy(rezultat, max->info.marca);
+    return rezultat;
+}
+
 int main() {
     int n = 4;
     struct Telefon* v = (struct Telefon*)malloc(sizeof(struct Telefon) * n);
@@ -457,6 +680,42 @@ int main() {
     }
 
     dezalocare(&v, &n);
+
+    ListaDubla lista;
+    lista.prim = NULL;
+    lista.ultim = NULL;
+
+    Telefon t1 = initializareTelefon(1, 5000, "Samsung", 2200.5f, 'S');
+    Telefon t2 = initializareTelefon(2, 4200, "Apple", 4500.0f, 'A');
+    Telefon t3 = initializareTelefon(3, 6000, "Xiaomi", 1800.0f, 'X');
+    Telefon t4 = initializareTelefon(4, 4800, "Huawei", 2100.0f, 'H');
+
+    adaugaTelefonInLista(&lista, t1);
+    adaugaTelefonInLista(&lista, t2);
+    adaugaTelefonInLista(&lista, t3);
+    adaugaLaInceputInLista(&lista, t4);
+
+    printf("Lista initiala:\n\n");
+    afisareListaTelefoane(lista);
+
+    printf("Pret mediu: %.2f\n\n", calculeazaPretMediu(lista));
+
+    char* marcaScump = getMarcaTelefonScump(lista);
+    if (marcaScump != NULL) {
+        printf("Marca telefonului cu pretul cel mai mare este: %s\n\n", marcaScump);
+        free(marcaScump);
+    }
+
+    printf("Stergem telefonul cu id = 2\n\n");
+    stergeTelefonDupaID(&lista, 2);
+    afisareListaTelefoane(lista);
+
+    dezalocareLDTelefoane(&lista);
+
+    free(t1.marca);
+    free(t2.marca);
+    free(t3.marca);
+    free(t4.marca);
 
     return 0;
 }
