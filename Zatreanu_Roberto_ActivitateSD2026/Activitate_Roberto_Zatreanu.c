@@ -9,6 +9,182 @@ struct Telefon {
     float pret;
     char model;
 };
+typedef struct Telefon Telefon;
+typedef struct Nod Nod;
+typedef struct HashTable HashTable;
+
+Telefon citireTelefonDinFisier(FILE* file) {
+    char buffer[100];
+    char sep[3] = ",\n";
+    fgets(buffer, 100, file);
+
+    Telefon t;
+    char* aux;
+
+    aux = strtok(buffer, sep);
+    t.id = atoi(aux);
+
+    t.capacitateBaterie = atoi(strtok(NULL, sep));
+
+    aux = strtok(NULL, sep);
+    t.marca = malloc(strlen(aux) + 1);
+    strcpy(t.marca, aux);
+
+    t.pret = atof(strtok(NULL, sep));
+
+    t.model = *strtok(NULL, sep);
+
+    return t;
+}
+
+void afisareTelefon(Telefon t) {
+    printf("Id: %d\n", t.id);
+    printf("Capacitate baterie: %d\n", t.capacitateBaterie);
+    printf("Marca: %s\n", t.marca);
+    printf("Pret: %.2f\n", t.pret);
+    printf("Model: %c\n\n", t.model);
+}
+
+void afisareListaTelefoane(Nod* cap) {
+    while (cap != NULL) {
+        afisareTelefon(cap->info);
+        cap = cap->next;
+    }
+}
+
+void adaugaTelefonInLista(Nod** cap, Telefon t) {
+    Nod* nou = malloc(sizeof(Nod));
+    nou->info = t;
+    nou->next = NULL;
+
+    if (*cap == NULL) {
+        *cap = nou;
+    }
+    else {
+        Nod* aux = *cap;
+        while (aux->next != NULL) {
+            aux = aux->next;
+        }
+        aux->next = nou;
+    }
+}
+
+HashTable initializareHashTable(int dim) {
+    HashTable ht;
+    ht.dim = dim;
+    ht.vector = malloc(sizeof(Nod*) * dim);
+
+    for (int i = 0; i < dim; i++) {
+        ht.vector[i] = NULL;
+    }
+
+    return ht;
+}
+
+int calculeazaHash(int id, int dim) {
+    return id % dim;
+}
+
+void inserareTelefonInTabela(HashTable ht, Telefon t) {
+    int poz = calculeazaHash(t.id, ht.dim);
+    adaugaTelefonInLista(&(ht.vector[poz]), t);
+}
+
+HashTable citireTelefoaneDinFisier(const char* numeFisier) {
+    FILE* f = fopen(numeFisier, "r");
+
+    HashTable ht = initializareHashTable(5);
+
+    if (f != NULL) {
+        while (!feof(f)) {
+            Telefon t = citireTelefonDinFisier(f);
+            inserareTelefonInTabela(ht, t);
+        }
+        fclose(f);
+    }
+    else {
+        printf("Fisierul nu a fost gasit!\n");
+    }
+
+    return ht;
+}
+
+void afisareTabela(HashTable ht) {
+    for (int i = 0; i < ht.dim; i++) {
+        printf("\n--- Cluster %d ---\n", i);
+        afisareListaTelefoane(ht.vector[i]);
+    }
+}
+
+void dezalocareLista(Nod** cap) {
+    while (*cap != NULL) {
+        Nod* temp = *cap;
+
+        free(temp->info.marca);
+
+        *cap = (*cap)->next;
+        free(temp);
+    }
+}
+
+void dezalocareTabela(HashTable* ht) {
+    for (int i = 0; i < ht->dim; i++) {
+        dezalocareLista(&(ht->vector[i]));
+    }
+
+    free(ht->vector);
+    ht->vector = NULL;
+    ht->dim = 0;
+}
+
+float* calculeazaPretMediu(HashTable ht, int* nrClustere) {
+    *nrClustere = 0;
+
+    for (int i = 0; i < ht.dim; i++) {
+        if (ht.vector[i] != NULL) {
+            (*nrClustere)++;
+        }
+    }
+
+    float* medii = malloc(sizeof(float) * (*nrClustere));
+    int index = 0;
+
+    for (int i = 0; i < ht.dim; i++) {
+        if (ht.vector[i] != NULL) {
+            float suma = 0;
+            int nr = 0;
+
+            Nod* aux = ht.vector[i];
+            while (aux != NULL) {
+                suma += aux->info.pret;
+                nr++;
+                aux = aux->next;
+            }
+
+            medii[index++] = suma / nr;
+        }
+    }
+
+    return medii;
+}
+
+Telefon cautaTelefon(HashTable ht, int id) {
+    int poz = calculeazaHash(id, ht.dim);
+
+    Nod* aux = ht.vector[poz];
+    while (aux != NULL) {
+        if (aux->info.id == id) {
+            return aux->info;
+        }
+        aux = aux->next;
+    }
+
+    Telefon t;
+    t.id = -1;
+    t.marca = NULL;
+    return t;
+}
+
 
 struct Telefon initializare(int id, int capacitate, const char* marca, float pret, char model) {
     struct Telefon t;
@@ -717,5 +893,32 @@ int main() {
     free(t3.marca);
     free(t4.marca);
 
+    HashTable ht = citireTelefoaneDinFisier("telefoane.txt");
+
+    afisareTabela(ht);
+
+    printf("\nCautare telefon:\n");
+    Telefon t = cautaTelefon(ht, 101);
+
+    if (t.id != -1) {
+        afisareTelefon(t);
+    }
+    else {
+        printf("Telefonul nu a fost gasit!\n");
+    }
+
+    int nr;
+    float* medii = calculeazaPretMediu(ht, &nr);
+
+    printf("\nPret mediu pe clustere:\n");
+    for (int i = 0; i < nr; i++) {
+        printf("%.2f\n", medii[i]);
+    }
+
+    free(medii);
+
+    dezalocareTabela(&ht);
+
+    return 0;
     return 0;
 }
