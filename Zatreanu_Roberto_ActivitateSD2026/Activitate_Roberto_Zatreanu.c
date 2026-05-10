@@ -763,7 +763,119 @@ char* getMarcaTelefonScump(ListaDubla lista) {
     strcpy(rezultat, max->info.marca);
     return rezultat;
 }
+struct Heap {
+    int lungime;
+    int nrElemente;
+    Telefon* telefoane;
+};
 
+typedef struct Heap Heap;
+
+Heap initializareHeap(int lungime) {
+    Heap heap;
+    heap.lungime = lungime;
+    heap.nrElemente = 0;
+    heap.telefoane = malloc(sizeof(Telefon) * lungime);
+    return heap;
+}
+
+void filtreazaHeap(Heap heap, int pozitieNod) {
+    int pozSt = 2 * pozitieNod + 1;
+    int pozDr = 2 * pozitieNod + 2;
+    int pozMin = pozitieNod;
+
+    if (pozSt < heap.nrElemente &&
+        heap.telefoane[pozMin].pret > heap.telefoane[pozSt].pret) {
+        pozMin = pozSt;
+    }
+
+    if (pozDr < heap.nrElemente &&
+        heap.telefoane[pozMin].pret > heap.telefoane[pozDr].pret) {
+        pozMin = pozDr;
+    }
+
+    if (pozMin != pozitieNod) {
+        Telefon aux = heap.telefoane[pozMin];
+        heap.telefoane[pozMin] = heap.telefoane[pozitieNod];
+        heap.telefoane[pozitieNod] = aux;
+
+        filtreazaHeap(heap, pozMin);
+    }
+}
+
+Heap citireHeapDeTelefoaneDinFisier(const char* numeFisier) {
+    Heap heap = initializareHeap(20);
+
+    FILE* f = fopen(numeFisier, "r");
+
+    if (f != NULL) {
+        while (!feof(f)) {
+            Telefon t = citireTelefonDinFisier(f);
+
+            if (t.id != -1) {
+                heap.telefoane[heap.nrElemente++] = t;
+            }
+        }
+
+        fclose(f);
+    }
+    else {
+        printf("Fisierul nu a fost gasit!\n");
+    }
+
+    for (int i = (heap.nrElemente - 2) / 2; i >= 0; i--) {
+        filtreazaHeap(heap, i);
+    }
+
+    return heap;
+}
+
+void afisareHeap(Heap heap) {
+    for (int i = 0; i < heap.nrElemente; i++) {
+        afisareTelefon(heap.telefoane[i]);
+    }
+}
+
+void afiseazaHeapAscuns(Heap heap) {
+    for (int i = heap.nrElemente; i < heap.lungime; i++) {
+        afisareTelefon(heap.telefoane[i]);
+    }
+}
+
+Telefon extrageTelefon(Heap* heap) {
+    Telefon telefon;
+    telefon.id = -1;
+    telefon.capacitateBaterie = 0;
+    telefon.marca = NULL;
+    telefon.pret = 0;
+    telefon.model = '-';
+
+    if (heap->nrElemente > 0) {
+        telefon = heap->telefoane[0];
+
+        heap->telefoane[0] = heap->telefoane[heap->nrElemente - 1];
+        heap->telefoane[heap->nrElemente - 1] = telefon;
+
+        heap->nrElemente--;
+
+        for (int i = (heap->nrElemente - 2) / 2; i >= 0; i--) {
+            filtreazaHeap(*heap, i);
+        }
+    }
+
+    return telefon;
+}
+
+void dezalocareHeap(Heap* heap) {
+    for (int i = 0; i < heap->lungime; i++) {
+        free(heap->telefoane[i].marca);
+    }
+
+    free(heap->telefoane);
+    heap->telefoane = NULL;
+    heap->lungime = 0;
+    heap->nrElemente = 0;
+}
 int main() {
     int n = 4;
     struct Telefon* v = (struct Telefon*)malloc(sizeof(struct Telefon) * n);
